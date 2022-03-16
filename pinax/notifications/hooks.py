@@ -22,21 +22,22 @@ class DefaultHookSet:
                 "scoping_content_type__isnull": True,
                 "scoping_object_id__isnull": True
             })
-        try:
-            return user.noticesetting_set.get(**kwargs)
-        except ObjectDoesNotExist:
-            _, NOTICE_MEDIA_DEFAULTS = load_media_defaults()
-            if scoping is None:
-                kwargs.pop("scoping_content_type__isnull")
-                kwargs.pop("scoping_object_id__isnull")
-                kwargs.update({
-                    "scoping_content_type": None,
-                    "scoping_object_id": None
-                })
-            default = (NOTICE_MEDIA_DEFAULTS[medium] <= notice_type.default)
-            kwargs.update({"send": default})
-            setting = user.noticesetting_set.create(**kwargs)
+        setting = user.noticesetting_set.filter(**kwargs).first()
+        if setting is not None:
             return setting
+        
+        _, NOTICE_MEDIA_DEFAULTS = load_media_defaults()
+        if scoping is None:
+            kwargs.pop("scoping_content_type__isnull")
+            kwargs.pop("scoping_object_id__isnull")
+            kwargs.update({
+                "scoping_content_type": None,
+                "scoping_object_id": None
+            })
+        default = (NOTICE_MEDIA_DEFAULTS[medium] <= notice_type.default)
+        kwargs.update({"send": default})
+        setting = user.noticesetting_set.create(**kwargs)
+        return setting
 
 
 class HookProxy:
