@@ -1,9 +1,10 @@
-from django.urls import re_path
+from django.urls import path
 
-from .views import NoticeSettingsView
+from .views import NoticeSettingsView, NoticeSettingView
 
 app_name = "pinax_notifications"
 
 urlpatterns = [
-    re_path(r"^settings/$", NoticeSettingsView.as_view(), name="notice_settings"),
+    path("settings/", NoticeSettingsView.as_view(), name="notice_settings"),
+    path("setting/<uuid:key>/", NoticeSettingView.as_view(), name="notice_setting"),
 ]

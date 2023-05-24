@@ -1,5 +1,6 @@
 import base64
 import pickle
+import uuid
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -81,7 +82,7 @@ class NoticeSetting(models.Model):
         verbose_name=_("notice type"),
         on_delete=models.CASCADE
     )
-    medium = models.CharField(_("medium"), max_length=1, choices=NOTICE_MEDIA)
+    medium = models.PositiveSmallIntegerField(_("medium"), choices=NOTICE_MEDIA)
     send = models.BooleanField(_("send"), default=False)
     scoping_content_type = models.ForeignKey(
         ContentType,
@@ -91,6 +92,7 @@ class NoticeSetting(models.Model):
     )
     scoping_object_id = models.PositiveIntegerField(null=True, blank=True)
     scoping = GenericForeignKey("scoping_content_type", "scoping_object_id")
+    key = models.UUIDField('key', help_text=_('Key to use for unsubscribe to the notification'), default=uuid.uuid4)
 
     @classmethod
     def for_user(cls, user, notice_type, medium, scoping=None):
@@ -113,6 +115,21 @@ class NoticeQueueBatch(models.Model):
     Denormalized data for a notice.
     """
     pickled_data = models.TextField()
+
+
+class NoticeStat(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name=_("user"),
+        on_delete=models.CASCADE
+    )
+    notice_type = models.ForeignKey(
+        NoticeType,
+        verbose_name=_("notice type"),
+        on_delete=models.CASCADE
+    )
+    medium = models.PositiveSmallIntegerField(_("medium"), choices=NOTICE_MEDIA)
+    when = models.DateTimeField(_('date'), auto_now_add=True)
 
 
 def get_notification_language(user):
@@ -166,6 +183,8 @@ def send_now(users, label, extra_context=None, sender=None, scoping=None):
         for backend in settings.PINAX_NOTIFICATIONS_BACKENDS.values():
             if backend.can_send(user, notice_type, scoping=scoping):
                 backend.deliver(user, sender, notice_type, extra_context)
+                if settings.PINAX_NOTIFICATIONS_STATS:
+                    NoticeStat.objects.create(user=user, notice_type=notice_type, medium=backend.medium_id)
                 sent = True
 
     # reset environment to original language

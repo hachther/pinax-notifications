@@ -4,7 +4,7 @@ from django.views.generic import TemplateView
 
 from .compat import login_required
 from .hooks import hookset
-from .models import NOTICE_MEDIA, NoticeType
+from .models import NOTICE_MEDIA, NoticeType, NoticeSetting
 
 
 class NoticeSettingsView(TemplateView):
@@ -76,5 +76,15 @@ class NoticeSettingsView(TemplateView):
         context.update({
             "notice_types": NoticeType.objects.all(),
             "notice_settings": settings
+        })
+        return context
+
+class NoticeSettingView(TemplateView):
+    template_name = "pinax/notifications/notice_setting.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            "notice_setting": NoticeSetting.objects.filter(key=self.kwargs['key']).first()
         })
         return context
